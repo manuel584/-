@@ -1,0 +1,7 @@
+{
+  "name": "وثيق",
+  "description": "A comprehensive React application for managing family business entities, including banking, GOSI compliance, medical insurance, and document management with glassmorphism UI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
