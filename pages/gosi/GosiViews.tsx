@@ -2,18 +2,45 @@
 import React, { useState } from 'react';
 import { GlassCard, Button, StatusBadge, Input, Modal } from '../../components/UI';
 import { MOCK_GOSI_INVOICES, MOCK_EMPLOYEES } from '../../constants';
-import { formatCurrency } from '../../utils';
-import { AlertTriangle, Clock, FileText, Users, Plus, Trash2, Edit2, ArrowLeft, Briefcase, Calendar, DollarSign, Download, Upload, CheckCircle2 } from 'lucide-react';
-import { Employee } from '../../types';
+import { formatCurrency, cn } from '../../utils';
+import { AlertTriangle, Clock, FileText, Users, Plus, Trash2, Edit2, ArrowLeft, Briefcase, Calendar, DollarSign, Download, Upload, CheckCircle2, MoreVertical, UploadCloud } from 'lucide-react';
+import { Employee, GosiInvoice, DocumentFile, PayrollRecord } from '../../types';
 
 export const GosiDashboard = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'employees'>('dashboard');
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  
+  // Local state for Invoices to allow updates
+  const [invoices, setInvoices] = useState<GosiInvoice[]>(MOCK_GOSI_INVOICES);
+  const [selectedInvoice, setSelectedInvoice] = useState<GosiInvoice | null>(null);
 
-  // Filter mock invoices
-  const overdueInvoice = MOCK_GOSI_INVOICES.find(i => i.status === 'Overdue');
-  const pendingInvoice = MOCK_GOSI_INVOICES.find(i => i.status === 'Pending');
+  // Filter invoices based on state
+  const overdueInvoice = invoices.find(i => i.status === 'Overdue');
+  const pendingInvoice = invoices.find(i => i.status === 'Pending');
+
+  const handlePayInvoice = (id: string) => {
+    setInvoices(prev => prev.map(inv => 
+      inv.id === id ? { ...inv, status: 'Paid' } : inv
+    ));
+    if (selectedInvoice?.id === id) {
+      setSelectedInvoice(null);
+    }
+  };
+
+  const handleCreateNewInvoice = (amount: number) => {
+    const newInv: GosiInvoice = {
+      id: `g${Date.now()}`,
+      month: new Date().toLocaleString('default', { month: 'long' }),
+      year: new Date().getFullYear(),
+      amount: amount,
+      status: 'Pending',
+      dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      issueDate: new Date().toISOString().split('T')[0]
+    };
+    setInvoices([...invoices, newInv]);
+    setShowCreateInvoice(false);
+  };
 
   if (selectedEmployee) {
     return <EmployeeDetail employee={selectedEmployee} onBack={() => setSelectedEmployee(null)} />;
@@ -40,16 +67,16 @@ export const GosiDashboard = () => {
         <>
           {/* Overdue Alert */}
           {overdueInvoice && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm animate-pulse">
               <AlertTriangle className="text-red-500 shrink-0 mt-1" />
               <div className="flex-1">
                 <h3 className="font-bold text-red-800">Payment OVERDUE</h3>
                 <p className="text-sm text-red-600 mt-1">
-                  Invoice for {overdueInvoice.month} {overdueInvoice.year} is overdue by 5 days.
+                  Invoice for {overdueInvoice.month} {overdueInvoice.year} is overdue.
                 </p>
                 <div className="mt-3 flex items-center justify-between">
                   <span className="font-bold text-red-800 text-lg">{formatCurrency(overdueInvoice.amount)}</span>
-                  <Button variant="danger" className="h-9 text-xs">Pay Now</Button>
+                  <Button variant="danger" className="h-9 text-xs" onClick={() => handlePayInvoice(overdueInvoice.id)}>Pay Now</Button>
                 </div>
               </div>
             </div>
@@ -84,13 +111,13 @@ export const GosiDashboard = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button className="flex-1">Mark as Paid</Button>
-                  <Button variant="secondary" className="flex-1">View Details</Button>
+                  <Button className="flex-1" onClick={() => handlePayInvoice(pendingInvoice.id)}>Mark as Paid</Button>
+                  <Button variant="secondary" className="flex-1" onClick={() => setSelectedInvoice(pendingInvoice)}>View Details</Button>
                 </div>
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">No invoice generated for current month yet.</p>
+                <p className="text-gray-500 mb-4">No pending invoice for current month.</p>
                 <Button onClick={() => setShowCreateInvoice(true)}>
                   <Plus size={16} className="mr-2" /> Create Invoice
                 </Button>
@@ -116,13 +143,50 @@ export const GosiDashboard = () => {
 
       {/* Modal for Invoice Creation */}
       <Modal isOpen={showCreateInvoice} onClose={() => setShowCreateInvoice(false)} title="Create Monthly Invoice">
-        <CreateInvoiceForm onClose={() => setShowCreateInvoice(false)} />
+        <CreateInvoiceForm onSave={handleCreateNewInvoice} onClose={() => setShowCreateInvoice(false)} />
+      </Modal>
+
+      {/* Modal for Invoice Details */}
+      <Modal isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} title="Invoice Details">
+         {selectedInvoice && (
+           <div className="space-y-4">
+             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
+               <div>
+                  <h3 className="font-bold text-gray-900 text-lg">{selectedInvoice.month} {selectedInvoice.year}</h3>
+                  <p className="text-xs text-gray-500">#{selectedInvoice.id.toUpperCase()}</p>
+               </div>
+               <StatusBadge status={selectedInvoice.status === 'Paid' ? 'success' : selectedInvoice.status === 'Overdue' ? 'error' : 'warning'} text={selectedInvoice.status} />
+             </div>
+             
+             <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                   <span className="text-gray-500">Issue Date</span>
+                   <span className="font-medium">{selectedInvoice.issueDate}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                   <span className="text-gray-500">Due Date</span>
+                   <span className="font-medium">{selectedInvoice.dueDate}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                   <span className="font-bold text-gray-900">Total Amount</span>
+                   <span className="font-bold text-blue-600 text-lg">{formatCurrency(selectedInvoice.amount)}</span>
+                </div>
+             </div>
+
+             <div className="pt-4 flex gap-3">
+                <Button variant="secondary" className="flex-1" onClick={() => setSelectedInvoice(null)}>Close</Button>
+                {selectedInvoice.status !== 'Paid' && (
+                  <Button className="flex-1" onClick={() => handlePayInvoice(selectedInvoice.id)}>Mark as Paid</Button>
+                )}
+             </div>
+           </div>
+         )}
       </Modal>
     </div>
   );
 };
 
-const CreateInvoiceForm = ({ onClose }: { onClose: () => void }) => {
+const CreateInvoiceForm = ({ onSave, onClose }: { onSave: (amount: number) => void, onClose: () => void }) => {
   const expectedAmount = MOCK_EMPLOYEES.reduce((acc, curr) => acc + (curr.basicSalary * 0.1), 0); // Mock 10% calculation
   const [actualAmount, setActualAmount] = useState('');
   const [difference, setDifference] = useState(0);
@@ -140,7 +204,7 @@ const CreateInvoiceForm = ({ onClose }: { onClose: () => void }) => {
       setError('Invoice amount is required');
       return;
     }
-    onClose();
+    onSave(parseFloat(actualAmount));
   };
 
   return (
@@ -326,6 +390,50 @@ const EmployeeSalaryList = ({ onSelectEmployee }: { onSelectEmployee: (emp: Empl
 // FULL EMPLOYEE DETAIL VIEW
 const EmployeeDetail = ({ employee, onBack }: { employee: Employee, onBack: () => void }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'documents' | 'payroll'>('info');
+  
+  // State for documents and payroll
+  const [documents, setDocuments] = useState<DocumentFile[]>([
+      { id: 'd1', name: 'Employment Contract', type: 'pdf', size: '2.4 MB', date: '2023-01-15', folder: 'Contracts' },
+      { id: 'd2', name: 'Saudi ID / Iqama', type: 'pdf', size: '2.4 MB', date: '2023-01-15', folder: 'Identity' },
+      { id: 'd3', name: 'Medical Insurance Card', type: 'pdf', size: '2.4 MB', date: '2023-01-15', folder: 'Insurance' }
+  ]);
+  const [payrollHistory, setPayrollHistory] = useState<PayrollRecord[]>([
+      { id: 'p1', month: 'October', date: '2023-10-28', status: 'Paid', amount: employee.fullSalary },
+      { id: 'p2', month: 'September', date: '2023-09-28', status: 'Paid', amount: employee.fullSalary },
+  ]);
+
+  // Modal States
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [isPayrollModalOpen, setIsPayrollModalOpen] = useState(false);
+  
+  const handleAddDocument = (name: string) => {
+      const newDoc: DocumentFile = {
+          id: `d${Date.now()}`,
+          name: name,
+          type: 'pdf',
+          size: '1.2 MB',
+          date: new Date().toISOString().split('T')[0],
+          folder: 'Uncategorized'
+      };
+      setDocuments([newDoc, ...documents]);
+      setIsDocModalOpen(false);
+  };
+  
+  const handleAddPayroll = (month: string, amount: number) => {
+      const newRecord: PayrollRecord = {
+          id: `p${Date.now()}`,
+          month: month,
+          date: new Date().toISOString().split('T')[0],
+          status: 'Paid',
+          amount: amount
+      };
+      setPayrollHistory([newRecord, ...payrollHistory]);
+      setIsPayrollModalOpen(false);
+  };
+
+  const handleDeleteDocument = (id: string) => {
+      setDocuments(prev => prev.filter(d => d.id !== id));
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
@@ -411,27 +519,45 @@ const EmployeeDetail = ({ employee, onBack }: { employee: Employee, onBack: () =
            <div className="space-y-4">
               <div className="flex justify-between items-center mb-2">
                  <h3 className="font-bold text-gray-900">Employee Documents</h3>
-                 <Button className="text-xs h-8"><Upload size={14} className="mr-1"/> Upload</Button>
+                 <Button className="text-xs h-8" onClick={() => setIsDocModalOpen(true)}>
+                    <Upload size={14} className="mr-1"/> Upload
+                 </Button>
               </div>
-              {['Employment Contract', 'Saudi ID / Iqama', 'Medical Insurance Card'].map((doc, i) => (
-                 <GlassCard key={i} className="flex items-center justify-between p-3 hover:bg-white/80 cursor-pointer">
+              {documents.map((doc, i) => (
+                 <GlassCard key={doc.id} className="flex items-center justify-between p-3 hover:bg-white/80 cursor-pointer group">
                     <div className="flex items-center gap-3">
                        <div className="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center">
                           <FileText size={20} />
                        </div>
                        <div>
-                          <p className="font-bold text-gray-900 text-sm">{doc}</p>
-                          <p className="text-xs text-gray-500">PDF • 2.4 MB</p>
+                          <p className="font-bold text-gray-900 text-sm">{doc.name}</p>
+                          <p className="text-xs text-gray-500">PDF • {doc.size}</p>
                        </div>
                     </div>
-                    <Button variant="ghost" className="h-8 w-8 p-0 rounded-full"><Download size={16}/></Button>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full" onClick={() => handleDeleteDocument(doc.id)}>
+                            <Trash2 size={16} className="text-red-400" />
+                        </Button>
+                        <Button variant="ghost" className="h-8 w-8 p-0 rounded-full">
+                            <Download size={16}/>
+                        </Button>
+                    </div>
                  </GlassCard>
               ))}
+              {documents.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">No documents found</div>
+              )}
            </div>
         )}
 
         {activeTab === 'payroll' && (
            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-2">
+                 <h3 className="font-bold text-gray-900">Payment History</h3>
+                 <Button className="text-xs h-8" onClick={() => setIsPayrollModalOpen(true)}>
+                    <Plus size={14} className="mr-1"/> Record Payment
+                 </Button>
+              </div>
               <div className="overflow-hidden rounded-xl border border-gray-200">
                  <table className="w-full text-sm text-left">
                     <thead className="bg-gray-50 text-gray-500 font-medium">
@@ -443,11 +569,7 @@ const EmployeeDetail = ({ employee, onBack }: { employee: Employee, onBack: () =
                        </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white/50">
-                       {[
-                         { month: 'October', date: '2023-10-28', status: 'Paid', amount: employee.fullSalary },
-                         { month: 'September', date: '2023-09-28', status: 'Paid', amount: employee.fullSalary },
-                         { month: 'August', date: '2023-08-28', status: 'Paid', amount: employee.fullSalary },
-                       ].map((record, i) => (
+                       {payrollHistory.map((record, i) => (
                           <tr key={i} className="hover:bg-white/80">
                              <td className="px-4 py-3 font-medium text-gray-900">{record.month}</td>
                              <td className="px-4 py-3 text-gray-500">{record.date}</td>
@@ -455,12 +577,127 @@ const EmployeeDetail = ({ employee, onBack }: { employee: Employee, onBack: () =
                              <td className="px-4 py-3 text-right font-mono">{formatCurrency(record.amount)}</td>
                           </tr>
                        ))}
+                       {payrollHistory.length === 0 && (
+                          <tr><td colSpan={4} className="text-center py-4 text-gray-400">No payment records found</td></tr>
+                       )}
                     </tbody>
                  </table>
               </div>
            </div>
         )}
       </div>
+
+      {/* Upload Document Modal */}
+      <Modal isOpen={isDocModalOpen} onClose={() => setIsDocModalOpen(false)} title="Upload Document">
+          <UploadDocumentForm onSave={handleAddDocument} onClose={() => setIsDocModalOpen(false)} />
+      </Modal>
+
+      {/* Add Payroll Modal */}
+      <Modal isOpen={isPayrollModalOpen} onClose={() => setIsPayrollModalOpen(false)} title="Record Salary Payment">
+          <AddPayrollForm defaultAmount={employee.fullSalary} onSave={handleAddPayroll} onClose={() => setIsPayrollModalOpen(false)} />
+      </Modal>
+
     </div>
   );
 };
+
+// --- Sub-components for Modals ---
+const UploadDocumentForm = ({ onSave, onClose }: { onSave: (name: string) => void, onClose: () => void }) => {
+    const [name, setName] = useState('');
+    const [fileSelected, setFileSelected] = useState(false);
+    const [errors, setErrors] = useState<{name?: string, file?: string}>({});
+
+    const handleUpload = () => {
+        const newErrors: any = {};
+        if (!name.trim()) newErrors.name = "Document name is required";
+        if (!fileSelected) newErrors.file = "Please select a file to upload";
+
+        setErrors(newErrors);
+        if (Object.keys(newErrors).length === 0) {
+            onSave(name);
+        }
+    }
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <label className="text-sm font-medium text-gray-700">Document Name</label>
+                <Input 
+                    value={name} 
+                    onChange={e => { setName(e.target.value); if(errors.name) setErrors({...errors, name: ''}); }} 
+                    placeholder="e.g. Contract Renewal" 
+                    autoFocus 
+                    error={errors.name}
+                />
+            </div>
+            
+            <div 
+                className={cn(
+                    "border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer",
+                    errors.file ? "border-red-300 bg-red-50" : "border-gray-300 hover:bg-gray-50",
+                    fileSelected ? "border-blue-500 bg-blue-50" : ""
+                )}
+                onClick={() => { setFileSelected(true); if(errors.file) setErrors({...errors, file: ''}); }}
+            >
+                {fileSelected ? (
+                     <div className="animate-in fade-in zoom-in-95">
+                        <FileText size={24} className="mx-auto text-blue-500 mb-1" />
+                        <p className="font-medium text-blue-900">File Selected</p>
+                    </div>
+                ) : (
+                    <>
+                        <UploadCloud size={24} className={errors.file ? "mx-auto mb-2 text-red-400" : "mx-auto mb-2 text-gray-400"} />
+                        <p className={errors.file ? "text-red-500 font-medium" : "text-gray-500"}>Click to select file</p>
+                    </>
+                )}
+            </div>
+            {errors.file && <p className="text-xs text-red-500 text-center">{errors.file}</p>}
+
+            <div className="flex gap-3">
+                <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+                <Button className="flex-1" onClick={handleUpload}>Upload</Button>
+            </div>
+        </div>
+    )
+}
+
+const AddPayrollForm = ({ defaultAmount, onSave, onClose }: { defaultAmount: number, onSave: (month: string, amount: number) => void, onClose: () => void }) => {
+    const [month, setMonth] = useState('November');
+    const [amount, setAmount] = useState(defaultAmount.toString());
+    const [error, setError] = useState('');
+
+    const handleSubmit = () => {
+        if (!amount || parseFloat(amount) <= 0) {
+            setError('Please enter a valid amount');
+            return;
+        }
+        onSave(month, Number(amount));
+    }
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <label className="text-sm font-medium text-gray-700">Month</label>
+                <select className="w-full px-4 py-2 bg-white border border-gray-200 rounded-xl" value={month} onChange={e => setMonth(e.target.value)}>
+                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => (
+                        <option key={m} value={m}>{m}</option>
+                    ))}
+                </select>
+            </div>
+            <div>
+                <label className="text-sm font-medium text-gray-700">Amount</label>
+                <Input 
+                    type="number" 
+                    value={amount} 
+                    onChange={e => { setAmount(e.target.value); setError(''); }} 
+                    error={error}
+                />
+            </div>
+            <div className="flex gap-3">
+                <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+                <Button className="flex-1" onClick={handleSubmit}>Record Payment</Button>
+            </div>
+        </div>
+    )
+}
+    

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Landmark, Receipt, FileText, Menu, X, Shield, Wallet, Briefcase, Folder, Plus, Bell } from 'lucide-react';
+import { ArrowLeft, Landmark, Receipt, FileText, Menu, X, Shield, Wallet, Briefcase, Folder, Plus, Bell, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import { BankingCategories, AccountList, AccountDetail, BankingProvider } from './banking/BankingViews';
 import { GosiDashboard } from './gosi/GosiViews';
 import { InsuranceDashboard } from './insurance/InsuranceViews';
@@ -43,6 +43,9 @@ export const EntityView = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editError, setEditError] = useState('');
+
+  // Mobile Menu State
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (!entity) return (
     <div className="flex flex-col items-center justify-center h-screen bg-[#f0f4ff] p-4 text-center">
@@ -170,7 +173,7 @@ export const EntityView = () => {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Header */}
-        <header className="h-16 px-4 md:px-8 border-b border-white/50 bg-white/30 backdrop-blur-md flex items-center justify-between shrink-0">
+        <header className="h-16 px-4 md:px-8 border-b border-white/50 bg-white/30 backdrop-blur-md flex items-center justify-between shrink-0 relative z-20">
           <div className="flex items-center gap-3">
              <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 hover:bg-white/50 rounded-lg">
                 <Menu size={20} className="text-gray-700" />
@@ -178,13 +181,44 @@ export const EntityView = () => {
              <button onClick={() => navigate('/')} className="hidden md:flex p-2 hover:bg-white/50 rounded-lg text-gray-500 hover:text-gray-900">
                 <ArrowLeft size={20} />
              </button>
-             <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px] md:max-w-md">{entity.name}</h1>
+             <h1 className="text-lg font-bold text-gray-900 truncate max-w-[150px] md:max-w-md">{entity.name}</h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden md:flex gap-2">
                <Button variant="ghost" className="h-8 text-xs px-3" onClick={() => { setEditName(entity.name); setIsEditModalOpen(true); }}>Edit Entity</Button>
                <Button variant="ghost" className="h-8 text-xs px-3 text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => setIsDeleteModalOpen(true)}>Delete</Button>
             </div>
+            
+            {/* Mobile Menu Button */}
+            <div className="md:hidden relative">
+                <button 
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="p-2 hover:bg-white/50 rounded-lg text-gray-600"
+                >
+                  <MoreVertical size={20} />
+                </button>
+                
+                {mobileMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMobileMenuOpen(false)}></div>
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl shadow-xl border border-gray-100 z-20 py-1 animate-in fade-in zoom-in-95 duration-200">
+                      <button 
+                        onClick={() => { setEditName(entity.name); setIsEditModalOpen(true); setMobileMenuOpen(false); }}
+                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <Edit2 size={16} /> Edit Entity
+                      </button>
+                      <button 
+                        onClick={() => { setIsDeleteModalOpen(true); setMobileMenuOpen(false); }}
+                        className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <Trash2 size={16} /> Delete Entity
+                      </button>
+                    </div>
+                  </>
+                )}
+            </div>
+
             <StatusBadge status={entity.status as any} />
           </div>
         </header>

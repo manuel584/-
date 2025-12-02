@@ -20,7 +20,7 @@ export const GlassCard: React.FC<{
   </div>
 );
 
-export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }> = ({ children, variant = 'primary', className, ...props }) => {
+export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' }> = ({ children, variant = 'primary', className, type = "button", ...props }) => {
   const variants = {
     primary: "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20",
     secondary: "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm",
@@ -30,6 +30,7 @@ export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { 
 
   return (
     <button 
+      type={type}
       className={cn(
         "px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed",
         variants[variant],
@@ -125,7 +126,7 @@ export const BiometricGuard: React.FC<{ children: React.ReactNode, title?: strin
        <h3 className="text-lg font-bold text-gray-800 mb-1">{title}</h3>
        <p className="text-sm text-gray-500 mb-6 max-w-xs">Identity verification is required to view this sensitive information.</p>
        
-       <Button onClick={handleVerify} disabled={isVerifying} className="min-w-[140px]">
+       <Button onClick={handleVerify} disabled={isVerifying} className="min-w-[140px]" type="button">
           {isVerifying ? "Verifying..." : "View Content"}
        </Button>
     </div>

@@ -10,6 +10,7 @@ import { Auth } from './pages/Auth';
 import { Sparkles, Home, Search as SearchIcon, Bell, User } from 'lucide-react';
 import { cn } from './utils';
 import { EntityProvider } from './context/EntityContext';
+import { ReminderProvider } from './context/ReminderContext';
 
 const AISearchWidget = () => {
   const location = useLocation();
@@ -74,22 +75,24 @@ const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
 const App = () => {
   return (
     <EntityProvider>
-      <HashRouter>
-        <div className="min-h-screen text-gray-800 antialiased selection:bg-blue-100 selection:text-blue-900 pb-20 md:pb-0">
-          <Routes>
-            <Route path="/login" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/entity/:id" element={<ProtectedRoute><EntityView /></ProtectedRoute>} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-          
-          <AISearchWidget />
-          <BottomNav />
-        </div>
-      </HashRouter>
+      <ReminderProvider>
+        <HashRouter>
+          <div className="min-h-screen text-gray-800 antialiased selection:bg-blue-100 selection:text-blue-900 pb-20 md:pb-0">
+            <Routes>
+              <Route path="/login" element={<Auth />} />
+              <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/entity/:id" element={<ProtectedRoute><EntityView /></ProtectedRoute>} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+            
+            <AISearchWidget />
+            <BottomNav />
+          </div>
+        </HashRouter>
+      </ReminderProvider>
     </EntityProvider>
   );
 };

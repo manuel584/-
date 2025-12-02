@@ -1,25 +1,15 @@
 
 import React, { useState } from 'react';
-import { GlassCard, Button, Input, Modal, StatusBadge } from '../../components/UI';
-import { Bell, Plus, Calendar, Clock, CheckCircle2, Circle, Flag } from 'lucide-react';
+import { GlassCard, Button, Input, Modal } from '../../components/UI';
+import { Bell, Plus, Calendar, Clock, CheckCircle2, Circle } from 'lucide-react';
 import { Reminder } from '../../types';
+import { useReminders } from '../../context/ReminderContext';
 
 export const ReminderSection = () => {
-  const [reminders, setReminders] = useState<Reminder[]>([
-    { id: '1', title: 'Renew Trade License', dueDate: '2024-03-20', dueTime: '09:00', priority: 'High', completed: false },
-    { id: '2', title: 'Submit VAT Return', dueDate: '2024-03-25', dueTime: '14:00', priority: 'High', completed: false },
-    { id: '3', title: 'Review Employee Contracts', dueDate: '2024-04-01', dueTime: '10:00', priority: 'Medium', completed: true },
-  ]);
-
+  const { reminders, addReminder, toggleReminder } = useReminders();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newReminder, setNewReminder] = useState<Partial<Reminder>>({ priority: 'Medium' });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const toggleComplete = (id: string) => {
-    setReminders(reminders.map(r => 
-      r.id === id ? { ...r, completed: !r.completed } : r
-    ));
-  };
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -33,24 +23,20 @@ export const ReminderSection = () => {
 
   const handleCreate = () => {
     if (validate()) {
-      const reminder: Reminder = {
-        id: Date.now().toString(),
+      addReminder({
         title: newReminder.title!,
         dueDate: newReminder.dueDate!,
         dueTime: newReminder.dueTime!,
         priority: newReminder.priority as any || 'Medium',
         completed: false
-      };
+      });
       
-      setReminders([reminder, ...reminders]);
       setIsModalOpen(false);
       setNewReminder({ priority: 'Medium' });
       
       // Simulate Notification
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Reminder Set", { body: `Reminder set for ${reminder.title}` });
-      } else {
-        alert(`Reminder set: ${reminder.title}`);
+        new Notification("Reminder Set", { body: `Reminder set for ${newReminder.title}` });
       }
     }
   };
@@ -78,7 +64,7 @@ export const ReminderSection = () => {
         {reminders.map(reminder => (
           <GlassCard key={reminder.id} className={`flex items-center gap-4 p-4 transition-all ${reminder.completed ? 'opacity-60 bg-gray-50/50' : 'bg-white/70'}`}>
             <button 
-              onClick={() => toggleComplete(reminder.id)}
+              onClick={() => toggleReminder(reminder.id)}
               className={`shrink-0 transition-colors ${reminder.completed ? 'text-green-500' : 'text-gray-300 hover:text-blue-500'}`}
             >
               {reminder.completed ? <CheckCircle2 size={24} /> : <Circle size={24} />}
